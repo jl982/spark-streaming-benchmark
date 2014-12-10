@@ -27,15 +27,21 @@ object DataGeneratorTimestamp {
       println("Got a new connection")
       val out = new RateLimitedOutputStream(socket.getOutputStream, bytesPerSec)
       try {
+        var counter = 0
         while (true) {
-          val curTime = System.currentTimeMillis
-          val curTimeString = curTime.toString + "\n"
+          val curTimeString = System.currentTimeMillis.toString
+          val sb = new StringBuilder
+          for (i <- 0 until 10) {
+            sb ++= curTimeString + "-" + counter.toString + "\n"
+            counter += 1
+          }
+          val curTimeStrings = sb.toString
 
-          out.write(curTimeString.getBytes)
+          out.write(curTimeStrings.getBytes)
         }
       } catch {
         case e: IOException =>
-          println("Client disconnected")
+          println("Client disconnected.")
           socket.close()
       }
     }

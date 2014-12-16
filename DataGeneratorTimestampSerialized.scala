@@ -15,12 +15,12 @@ import org.apache.spark.serializer.KryoSerializer
  */
 object DataGeneratorTimestampSerialized {
   def main(args: Array[String]) {
-    if (args.length != 2) {
-      System.err.println("Usage: DataGeneratorTimestampSerialized <port> <bytesPerSec>")
+    if (args.length != 3) {
+      System.err.println("Usage: DataGeneratorTimestampSerialized <port> <bytesPerSec> <recordsPerBlock>")
       System.exit(1)
     }
     // Parse the arguments using a pattern match
-    val (port, bytesPerSec) = (args(0).toInt, args(1).toInt)
+    val (port, bytesPerSec, recordsPerBlock) = (args(0).toInt, args(1).toInt, args(2).toInt)
 
     val bufferStream = new ByteArrayOutputStream(32)
     val ser = new KryoSerializer(new SparkConf()).newInstance()
@@ -35,11 +35,14 @@ object DataGeneratorTimestampSerialized {
       val out = new RateLimitedOutputStream(socket.getOutputStream, bytesPerSec)
       try {
         var counter = 0
+        var accum: Long = 0
         while (true) {
           val curTimeString = System.currentTimeMillis.toString
           bufferStream.reset()
-          serStream.writeObject(curTimeString + "-" + counter.toString + "\n")
-          counter += 1
+          for (i <- 0 until recordsPerBlock) {
+            serStream.writeObject(curTimeString + "-" + counter.toString + "\n")
+            counter += 1
+          }
           serStream.flush()
           val array = bufferStream.toByteArray
 
@@ -52,6 +55,11 @@ object DataGeneratorTimestampSerialized {
           //println("array [" + Arrays.toString(array) + "]")
           out.write(countBuf.array)
           out.write(array)
+
+          accum += System.currentTimeMillis - curTimeString.toLong
+          if (counter % 1000000 == 0) {
+            println(accum + " " + counter + " " + accum.toDouble/(counter/recordsPerBlock))
+          }
         }
       } catch {
         case e: IOException =>

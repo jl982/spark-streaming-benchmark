@@ -43,7 +43,7 @@ object BenchmarkTimestampSerialized {
       val receiveTime = System.currentTimeMillis;
       val sendTime = time.substring(0, 13).toLong;
       val latency = receiveTime - sendTime;
-      s"[$sendTime] $receiveTime $latency"
+      s"${time.stripLineEnd} $receiveTime $latency"
     }
     //latencies.saveAsTextFiles("latencies")
     latencies.print()
